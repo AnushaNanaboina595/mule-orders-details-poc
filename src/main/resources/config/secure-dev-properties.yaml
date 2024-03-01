@@ -1,0 +1,20 @@
+#DB Details
+
+db:
+  user: "![mEOQYRydNyd10F3jDHdYoQ==]"
+  password: "![mEOQYRydNyd10F3jDHdYoQ==]" 
+  
+
+# jms details:
+
+jms:
+  Username: "![3Lk3dtG4ROzKT8q0cs5WIg==]"
+  password: "![3Lk3dtG4ROzKT8q0cs5WIg==]"   
+  
+# Secure Properties
+details:
+  clientId: "![icQ5RclJbMNRBVdsm9f1rrkA+fDnJyo46CG4D8hzrSOY+CZJAJU2Cqm3nOskajN+]"
+  clientSecret: "![TQUSqlb132+5qWq0ENAZfWVWhBvfVumx+w38GvYBJJVoBXUnIHnSAFACyO0qrtqK]" 
+#  
+#${secure::details.clientId}
+#${secure::details.clientSecret}                          

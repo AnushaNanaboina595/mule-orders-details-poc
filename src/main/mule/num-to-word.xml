@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<sub-flow name="num-to-wordSub_Flow" doc:id="e025caa7-274f-471d-b3fe-7c533eba5edc" >
+		<logger level="INFO" doc:name="Logger" doc:id="db938f2a-1ac4-4a8c-96c7-4511fd9d5b8e" message="entered num-to-wordSub_Flow"/>
+		<choice doc:name="orderPrice nullCheck Validation" doc:id="d67d8a85-b30e-430b-b9f1-31c917a466d5">
+			<when expression='#[vars.activeMQFields.orderPrice != null and vars.activeMQFields.orderPrice != "" or payload.orderPrice==0]'>
+				<ee:transform doc:name="Transform Message" doc:id="e9cc6eda-db22-4d26-a024-aee11071b627">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://www.dataaccess.com/webservicesserver/
+---
+{
+	ns0#NumberToWords: {
+		ns0#ubiNum: vars.activeMQFields.orderPrice
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+				<wsc:consume doc:name="Consume" doc:id="61b68e36-4631-48f5-b1fd-992aed5dbc5f" config-ref="NumberConversion_Web_Service_Consumer_Config" operation="NumberToWords" />
+				<ee:transform doc:name="Transform Message" doc:id="160f5db2-2354-44c2-be48-351a73f3eb9e">
+			<ee:message>
+						<ee:set-payload ><![CDATA[%dw 2.0
+ns ns0 http://www.dataaccess.com/webservicesserver/
+
+output application/json
+---
+payload.body.ns0#NumberToWordsResponse.ns0#NumberToWordsResult
+]]></ee:set-payload>
+			</ee:message>
+			<ee:variables>
+			</ee:variables>
+		</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="649b8134-b377-4b0d-89cd-c24f80c34f62" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+null]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="orderPrice" ><![CDATA[//%dw 2.0
+//output application/json
+//---
+null]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</sub-flow>
+</mule>

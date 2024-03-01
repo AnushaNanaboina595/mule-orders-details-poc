@@ -1,0 +1,10 @@
+jms:
+  username: "admin"
+  password: "admin"
+  brokerurl: "tcp://localhost:61616"
+  destination: "orders-details-queue"
+  
+http:
+  host: "0.0.0.0"
+  port: "8095"
+  path: "/api/order"

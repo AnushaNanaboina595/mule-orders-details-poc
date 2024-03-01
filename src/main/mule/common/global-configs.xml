@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
+      xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+      xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+    <jms:config name="JMS_Config" doc:name="JMS Config" doc:id="73493694-87fe-4027-bb52-6fc8b29c5b62" >
+        <jms:active-mq-connection username="${jms.username}" password="${jms.password}" >
+            <jms:factory-configuration brokerUrl="${jms.brokerurl}" />
+        </jms:active-mq-connection>
+    </jms:config>
+    <http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="7f0fad08-92e3-4984-8bdf-e88feb85eb4d">
+        <http:request-connection host="${http.host}" port="${http.port}" connectionIdleTimeout="1800000"/>
+		<http:default-headers >
+			<http:default-header key="client_id" value="${secure::details.clientId}" />
+			<http:default-header key="clientSecret" value="${secure::details.clientSecret}" />
+		</http:default-headers>
+    
+</http:request-config>
+    <wsc:config name="CountryInfoService_Web_Service_Consumer_Config" doc:name="Web Service Consumer Config" doc:id="b22a3667-ff91-4321-8af5-25c5d0104141">
+        <wsc:connection wsdlLocation="wsdl/CountryInfoService.wsdl" service="CountryInfoService" port="CountryInfoServiceSoap" address="http://webservices.oorsprong.org/websamples.countryinfo/CountryInfoService.wso" >
+            <wsc:custom-transport-configuration >
+				<wsc:default-http-transport-configuration timeout="30000000" />
+			</wsc:custom-transport-configuration>
+			<wsc:web-service-security actor="http://schemas.xmlsoap.org/soap/actor/next" />
+        </wsc:connection>
+    </wsc:config>
+    <wsc:config name="NumberConversion_Web_Service_Consumer_Config" doc:name="Web Service Consumer Config" doc:id="8507fbb7-001c-4078-bb51-91515ed12f1a" >
+        <wsc:connection wsdlLocation="wsdl\NumberConversion.wsdl" service="NumberConversion" port="NumberConversionSoap" address="https://www.dataaccess.com/webservicesserver/NumberConversion.wso">
+			<wsc:custom-transport-configuration >
+				<wsc:default-http-transport-configuration timeout="3000000" />
+			</wsc:custom-transport-configuration>
+		</wsc:connection>
+    </wsc:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="9668095b-f1c6-474c-b534-18c9fa3f77d7" file="dev-config.yaml" />
+	<configuration doc:name="Configuration" doc:id="37e80dc6-44ab-4826-a9ff-fec08486cba6" defaultErrorHandler-ref="global-error-handler" />
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="196f73bc-cabf-4085-84e2-33de9e1001c2" file="config\secure-dev-properties.yaml" key="Anusha6304658792" />
+
+</mule>

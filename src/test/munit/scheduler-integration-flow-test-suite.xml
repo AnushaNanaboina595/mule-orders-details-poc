@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+	xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<munit:config name="scheduler-integration-flow-test-suite.xml" />
+	<munit:test name="scheduler-integration-flow-test-suite-scheduler-integration-deleteFlowTest" doc:id="2da67fcd-c88f-4606-be52-42a45599b233" description="Test">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when" doc:id="eb843061-c074-4578-9ed7-f6e7fb4b0ffa" processor="http:request">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Get Records from DB" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="6f087d27-4e25-4689-ab84-a7021e5e6c82" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/json&#10;---&#10;readUrl('classpath://munitTestFiles/scheduler-delete-db-response.json','application/json')]" mediaType="application/json" encoding="UTF-8" />
+					<munit-tools:attributes value="#[output application/json&#10;---&#10;readUrl('classpath://munitTestFiles/scheduler-delete-db-response.json','application/json')]" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="Mock when" doc:id="68f37e42-2708-46b2-bc10-ff16450ae613" processor="http:request">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="DeleteRecords" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="831a8dc6-6402-4e7c-b7c5-7e8acec97dcb" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to scheduler-integration-flowFlow" doc:id="f068365c-cf11-43ed-b658-ba3e19d9952a" name="scheduler-integration-flowFlow"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-equals doc:name="Assert equals" doc:id="66c7c0d5-14ee-4044-8bdb-ace32cbe1e4b" actual="#[payload]" expected='#[{&#10;	"message" : "Scheduler logic for delete and update success"&#10;}]'/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="scheduler-integration-flow-test-suite-scheduler-integration-updateFlowTest" doc:id="fec9fbfc-b0ee-44d5-a2a6-6a48374ebcdb" description="Test" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when" doc:id="ba91eb0e-30cc-4262-900b-b22f651d5b43" processor="http:request" >
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Get Records from DB" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="6f087d27-4e25-4689-ab84-a7021e5e6c82" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/json&#10;---&#10;readUrl('classpath://munitTestFiles/scheduler-update-db-response.json','application/json')]" mediaType="application/json" encoding="UTF-8" />
+					<munit-tools:attributes value="#[output application/json&#10;---&#10;readUrl('classpath://munitTestFiles/scheduler-delete-db-response.json','application/json')]" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="Mock when" doc:id="25bd590b-5670-4532-9b98-cfed604a696d" processor="wsc:consume">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Consume" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="61b68e36-4631-48f5-b1fd-992aed5dbc5f" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="Mock when1" doc:id="4ae95fac-6621-4109-a7b0-4c118cade26a" processor="http:request" >
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="updateRequest" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="a71763c0-1310-4e12-8bc4-a710822f36b2" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to scheduler-integration-flowFlow" doc:id="2524ffcc-424d-4347-ac92-7393e6c555b0" name="scheduler-integration-flowFlow" />
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-equals doc:name="Assert equals" doc:id="d0f9f9e5-1ac8-4b60-bc67-6df15c31a3b2" actual="#[payload]" expected='#[{&#10;	"message" : "Scheduler logic for delete and update success"&#10;}]'/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="scheduler-integration-flow-test-suite-scheduler-integration-deleteFlowTest1" doc:id="553e4388-bd64-4530-a23d-4978bedd0fc3" description="Test" >
+		<munit:behavior>
+			<munit-tools:mock-when doc:name="Mock when" doc:id="5d042a8a-9815-4fc6-b5c8-b1c874d0f5fb" processor="http:request" >
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Get Records from DB" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="6f087d27-4e25-4689-ab84-a7021e5e6c82" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/json&#10;---&#10;{&#10;	&#10;}]" mediaType="application/json" encoding="UTF-8" />
+					<munit-tools:attributes value="#[output application/json&#10;---&#10;readUrl('classpath://munitTestFiles/scheduler-delete-db-response.json','application/json')]" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to scheduler-integration-flowFlow" doc:id="b1193977-1e3f-4805-8d18-8337b00bff89" name="scheduler-integration-flowFlow" />
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-equals doc:name="Assert equals" doc:id="45ec8dc1-8955-429d-a996-671757e1ed85" actual="#[payload]" expected='#[{  &#10;	"message" : "no records in database, unable to process the scheduler logic for delete and update."&#10;}]' />
+		</munit:validation>
+	</munit:test>
+	<munit:test name="scheduler-integration-flow-test-suite-scheduler-integration-deleteFlowTest2" doc:id="70b2d325-51f2-40a2-b8f8-14bf31073009" description="Test" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when" doc:id="11fd5be5-edf3-4cb6-9d1c-a6a1e24ad481" processor="http:request" >
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Get Records from DB" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="6f087d27-4e25-4689-ab84-a7021e5e6c82" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/json&#10;---&#10;readUrl('classpath://munitTestFiles/NoDeleteUpdatePayload.json','application/json')]" mediaType="application/json" encoding="UTF-8" />
+					<munit-tools:attributes value="#[output application/json&#10;---&#10;readUrl('classpath://munitTestFiles/scheduler-delete-db-response.json','application/json')]" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to scheduler-integration-flowFlow" doc:id="d6130e02-21a5-4cb9-aa4b-70b1eac60da7" name="scheduler-integration-flowFlow" />
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that doc:name="Assert that" doc:id="533c7b36-99d5-46f5-aa7a-e55e432b5958" expression="#[payload]" is="#[MunitTools::notNullValue()]" />
+		</munit:validation>
+	</munit:test>
+
+
+</mule>

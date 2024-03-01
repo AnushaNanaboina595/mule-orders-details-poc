@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_e025caa7_274f_471d_b3fe_7c533eba5edc_Output_Variables_orderPrice = Null
+

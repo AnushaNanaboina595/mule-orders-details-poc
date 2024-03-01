@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<sub-flow name="consume-subflow" doc:id="36c8b367-d3c3-4e14-aff6-72a7595edfa8" >
+		<set-variable value="#[payload]" doc:name="activeMQFields" doc:id="8bd48f15-1e5f-4f4a-8be4-c5e35371e87d" variableName="activeMQFields" />
+		<scatter-gather doc:name="OrderProcessingParallelizer" doc:id="fff0a797-b30d-4a30-b340-a0aabd497be6" >
+			<route >
+				<flow-ref doc:name="fetch-sISOCode" doc:id="7367ae81-e124-45b2-b3e9-b0932a180a63" name="fetch-sISOCode_Sub_Flow" />
+				<logger level="INFO" doc:name="After_fetch_sSISOCode" doc:id="d436970e-9b6d-462c-b298-58e95f9bec5e" message="Fetched sISOCode, sName successfully" />
+				<set-variable value='#[%dw 2.0&#10;output application/json&#10;---&#10;if (vars.activeMQFields.ISOCode == payload.sISOCode) payload.sName else "UNKNOWN"]' doc:name="sName" doc:id="76e8ce6c-1145-4ea3-8d73-14ad58dabd92" variableName="sName"/>
+				<logger level="INFO" doc:name="Logger" doc:id="a4221394-2386-4346-9291-2c46536df079" message="fetched sName successfully: #[vars.sName]" />
+			</route>
+			<route >
+				<flow-ref doc:name="numToWordConversion" doc:id="81e8a18e-5599-40a6-855a-9aacbc4cfd3f" name="num-to-wordSub_Flow"/>
+				<logger level="INFO" doc:name="After_consume" doc:id="4805945c-3be2-47e8-8a68-e81359f835fb" message="num-to-word conversion consume flow response: #[payload]"/>
+				<set-variable value="#[output application/json --- if(payload != null and sizeOf(payload)&gt;0) payload else null]" doc:name="orderPrice" doc:id="2e6d24d0-4773-47b2-877a-b5480add2f09" variableName="orderPrice"/>
+				<logger level="INFO" doc:name="Logger" doc:id="b7c30983-ad6c-485c-a6b2-2b91814f3b40" message="orderPrice after applying transformation : #[vars.orderPrice]"/>
+			</route>
+			<route >
+				<logger level="INFO" doc:name="Logger" doc:id="2b07e803-e4e4-403c-8826-dc11b69fb2a1" message="setting order-qt value" />
+				<ee:transform doc:name="transform &amp; set variable order_qt" doc:id="97af0f53-0ee7-4649-be65-457d49c14258">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="order_qt"><![CDATA[%dw 2.0
+output application/json
+---
+if ((vars.activeMQFields.orderPrice == null or vars.activeMQFields.orderPrice == "" ) or (vars.activeMQFields.orderQt == null or vars.activeMQFields.orderQt == "")) 0
+else ((vars.activeMQFields.orderPrice) * (vars.activeMQFields.orderQt))
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="d8627e36-44ab-491f-92ff-8415e3839d39" message="resultant order_qt after transformation : #[vars.order_qt]"/>
+			</route>
+		</scatter-gather>
+		<logger level="INFO" doc:name="After transformations" doc:id="36391aa1-5e85-4f60-956f-3024624c022b" message="modified activeMQFields  values  to be inserted into db"/>
+		<ee:transform doc:name="Mapping DB oder details  &amp; saving in modifiedOrderData" doc:id="d810301e-e32d-432c-85b0-97ae951019f6">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="modifiedOrderData"><![CDATA[%dw 2.0
+output application/json
+---
+{
+   "orderId":vars.activeMQFields.orderId,
+   "orderName":vars.activeMQFields.orderName,
+   "orderDate":vars.activeMQFields.orderDate,
+   "orderPrice":vars.orderPrice,
+   "orderQt":vars.order_qt,
+   "ISOCode":vars.sName
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="15f31987-5f99-45b4-ae8c-0c82df6a8bd0" name="target-load-subflow"/>
+	</sub-flow>
+	<sub-flow name="target-load-subflow" doc:id="8d1540a9-0625-457b-b77c-9f2d2b6030a9" >
+		<ee:transform doc:name="Validating ISOCode" doc:id="d3831400-68f7-4888-ab05-09a630cb3aec">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+
+fun isValidISOCode(isoCode: String): Boolean = 
+    isoCode == "DZD" or isoCode == "AWG" or isoCode == "Algeria Dinars" or isoCode == "Aruba Guilders (also called Florins)" or isoCode == "UNKNOWN"
+---
+{
+    isValid: isValidISOCode(vars.modifiedOrderData.ISOCode)
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<choice doc:name="payload validation" doc:id="7419caae-2932-428c-9869-74a9e760f7e1" >
+			<when expression="#[payload.isValid]">
+				<logger level="INFO" doc:name="Before order details save" doc:id="8933e4bf-8647-4cd8-a77a-bce60a4fe95e" message="order details is valid payload : #[vars.modifiedOrderData]"/>
+				<flow-ref doc:name="insert-or-update" doc:id="5acdae7d-ae72-40fc-8f13-504ca44f25dd" name="insert-or-update-subflow" />
+				<logger level="INFO" doc:name="After storing oder details" doc:id="80bcbab5-4aaf-49de-b8e5-a736fc393993" message="order details saved successfully in DB : modifiedOrderData"/>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Invalid modifiedOrderData payload" doc:id="b2f43bf2-6db8-4d81-bfe9-06ebce8d107a" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	error: "Bad Request", 
+    message: "Enter a valid ISOCode"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="insert-or-update-subflow" doc:id="0cae2942-9965-433c-aea8-bf40821109d1" >
+		<http:request method="GET" doc:name="Fetch Order Details" doc:id="55d9d87d-4229-4682-bd26-4c7a0629b3ce" config-ref="HTTP_Request_configuration" path="${http.path}" responseTimeout="300000000">
+		</http:request>
+		<set-variable value="#[payload]" doc:name="ordersList " doc:id="f653fb93-8cad-4639-b890-a93363197cf1" variableName="ordersList"/>
+		<ee:transform doc:name="order-id contains check" doc:id="aaee9dd4-fd1f-41e8-9447-9e935e82e16f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[output application/json
+---
+vars.ordersList.`order-id` contains(vars.modifiedOrderData.orderId)]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<choice doc:name="Check if orderId exists" doc:id="03f90522-97ac-43d1-8e40-9ec8248c0aae">
+			<when expression="#[payload == false]">
+				<logger level="INFO" doc:name="Before Insert" doc:id="ffa2124f-ec57-4567-ac18-b6b606a43926" message="order-id  doesn't exist" />
+				<http:request method="POST" doc:name="Insert Requester" doc:id="d531f788-6dc4-40af-8444-2fce56818ffa" config-ref="HTTP_Request_configuration" path="${http.path}" responseTimeout="30000000" >
+					<http:body ><![CDATA[#[vars.modifiedOrderData]]]></http:body>
+				</http:request>
+				<ee:transform doc:name="Insert Success Response" doc:id="728981c7-a7da-4c7e-b3ef-f8a27905af03" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"status" : "success",
+	"message" : "code and price of order_id:" ++ vars.modifiedOrderData.orderId as String ++ "inserted",
+	"response payload" : payload
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			
+</when>
+			<otherwise>
+				<logger level="INFO" doc:name="Before update" doc:id="b23e0bd4-1b5c-4f92-9adc-b5c2f6c43d63" message='#["order-id:" ++ vars.modifiedOrderData.orderId as String ++ " exist"]' />
+				<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;   "orderId" : vars.modifiedOrderData.orderId,&#10;   "ISOCode": vars.sName,&#10;   "orderPrice":vars.orderPrice&#10;}]' doc:name="setting update payload" doc:id="0eb51071-521d-4c26-8431-acaba1d78ce4" />
+				<http:request method="PUT" doc:name="Update Requester" doc:id="d1a0d0eb-1811-45ec-8944-c3f468e0bad8" config-ref="HTTP_Request_configuration" path="${http.path}" responseTimeout="300000000" />
+				<ee:transform doc:name="Update Success Response" doc:id="e146dd57-d95e-4142-ba7c-2d1d75f04219" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+"status" : "success",
+"message" : "code and price of order_id:" ++ vars.modifiedOrderData.orderId as String ++ "updated",
+"response payload" : payload
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			
+</otherwise>
+		</choice>
+	
+</sub-flow>
+	
+</mule>

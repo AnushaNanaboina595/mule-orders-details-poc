@@ -1,0 +1,10 @@
+{
+body:<m:CountryCurrencyResponse xmlns:m="http://www.oorsprong.org/websamples.countryinfo">
+      <m:CountryCurrencyResult>
+        <m:sISOCode>INR</m:sISOCode>
+        <m:sName>Rupees</m:sName>
+      </m:CountryCurrencyResult>
+    </m:CountryCurrencyResponse>,
+headers: [],
+attachments: []
+}

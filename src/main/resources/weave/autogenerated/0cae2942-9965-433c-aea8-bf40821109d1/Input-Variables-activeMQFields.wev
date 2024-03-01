@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_0cae2942_9965_433c_aea8_bf40821109d1_Input_Variables_activeMQFields = Any {"class": "java.lang.Object"}
+

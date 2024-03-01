@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="scheduler-integration-flowFlow" doc:id="45dbefc9-f12c-4c11-bdf8-ea60325f4ad3" initialState="started">
+		<scheduler doc:name="Scheduler_FetchRecords" doc:id="55d55e9b-4090-4580-ad18-f43fd124c3e2" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="1" timeUnit="MINUTES" />
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Scheduler_Tiggering_Logger" doc:id="ed0b0121-644a-4842-8a8d-21671f8bd535" message="Scheduler triggered at: #[now()]"/>
+		<http:request method="GET" doc:name="Get Records from DB" doc:id="6f087d27-4e25-4689-ab84-a7021e5e6c82" config-ref="HTTP_Request_configuration" path="${http.path}" responseTimeout="30000000"/>
+		<choice doc:name="Choice" doc:id="a5169ded-02d5-482f-a5e1-3fbc99adc6fd" >
+			<when expression="#[sizeOf(payload)!=0]">
+				<foreach doc:name="For Each" doc:id="1277cc8f-2d15-413d-817a-7f33b1fd1357" collection="#[payload]">
+			<set-variable value="#[payload]" doc:name="Set Variable" doc:id="c982da7f-5e50-4127-8fe7-a9bc7a744f61" variableName="inputOrder" />
+					<flow-ref doc:name="delete-update Flow Reference" doc:id="c3730192-df74-417c-8b07-35d8504b50ab" name="scheduler-delete-update-flow" />
+		</foreach>
+				<logger level="INFO" doc:name="After For Each" doc:id="c77eefd1-bed7-4143-b172-ece29f092ee7" message="Delete and  update processing completed" />
+				<ee:transform doc:name="Transform Message" doc:id="ba114258-8d6f-4ad8-8cb5-369387850ae9" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[output application/json
+---
+{
+	"message" : "Scheduler logic for delete and update success"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="8c4d535f-4236-49ef-ab3b-c2b4a41d7c31" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{  
+	"message" : "no records in database, unable to process the scheduler logic for delete and update."
+} ]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="34e5e65c-a902-4831-8b8a-1dc46246c037" message="no records in database, unable to process the scheduler logic for delete orders with order-qt 0 and update order-price if it is null."/>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Logger" doc:id="907ad33f-eb69-49cb-96be-4a51a361aae9" message="scheduler trigger success at: #[now()]"/>
+	</flow>
+	<sub-flow name="scheduler-delete-update-flow" doc:id="9e126afa-e571-4ef3-96dc-b618747706fe" >
+		<choice doc:name="Choice_Router" doc:id="e45692a8-bcb1-4863-a5cc-e9c2bc7bc404" >
+			<when expression="#[vars.inputOrder.`order-price` == null]" >
+				<logger level="INFO" doc:name="Logger" doc:id="4346668e-79c0-4e4a-b3c0-91c73b9339c2" message="orderPrice is null for orderId #[vars.inputOrder.`order-qt`]" />
+				<ee:transform doc:name="setting uniNum to 0" doc:id="6c046545-306e-46e2-9647-5001351f2a0e">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	orderPrice : 0
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<flow-ref doc:name="SOAP_CallForNullOrderPrice" doc:id="dcc40f24-9c9c-4473-9d51-5595a1733b7b" name="num-to-wordSub_Flow" />
+				<ee:transform doc:name="payload for update order" doc:id="c6e1fefc-c2df-46eb-ba36-30487b24ffaa">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	orderId : vars.inputOrder.`order-id`,
+	orderPrice : payload,
+	ISOCode : vars.inputOrder.`code`
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+				<http:request method="PUT" doc:name="updateRequest" doc:id="a71763c0-1310-4e12-8bc4-a710822f36b2" config-ref="HTTP_Request_configuration" path="${http.path}" responseTimeout="300000000" />
+				<logger level="INFO" doc:name="After Successful Update" doc:id="fba4f4d4-b340-46c7-a34b-dc20cffc34cb" message="OrderPrice updated successfully for record with ID: #[vars.inputOrder.`order-id`]" />
+			</when>
+			<when expression="#[vars.inputOrder.`order-qt` == 0 or vars.inputOrder.`order-qt`==null]">
+				<logger level="INFO" doc:name="Logger" doc:id="c2cb9831-dac5-46e8-971d-d6ebeffe4c3d" message="order-qt is 0 for order #[vars.inputOrder.`order-qt`]" />
+				<ee:transform doc:name="Transform Message" doc:id="21a52473-5a7f-4fc2-bbb1-405094c67165">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "orderId"	: vars.inputOrder.`order-id`
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<http:request method="DELETE" doc:name="DeleteRecords" doc:id="831a8dc6-6402-4e7c-b7c5-7e8acec97dcb" config-ref="HTTP_Request_configuration" path="${http.path}" responseTimeout="300000" />
+				<logger level="INFO" doc:name="LogAfterDeleteRequest" doc:id="e3710a54-21dc-4cbe-8436-e3f46f751163" message="Record with ID:  #[vars.inputOrder.`order-id`] successfully deleted from the database" />
+			</when>
+			<otherwise >
+				<logger level="ERROR" doc:name="Logger" doc:id="d0164bab-5ec8-48fd-a258-6c81bef9ecc1" message="neither order-price is  null nor order-qt is  0 for id #[vars.inputOrder.`order-qt`]" />
+			</otherwise>
+		</choice>
+	</sub-flow>
+</mule>

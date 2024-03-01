@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc" xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd">
+	<flow name="ConsumeFromActiveMQFlow" doc:id="16f76889-e8a1-4302-8dda-6ff03b69cd77" initialState="started">
+		<jms:listener doc:name="ConsumeMessageFromActiveMQ" doc:id="c940473e-426e-427d-9b89-8b6c7f38dd36" config-ref="JMS_Config" destination="${jms.destination}" inboundContentType="application/json" inboundEncoding="UTF-8">
+			<jms:response persistentDelivery="true" />
+		</jms:listener>
+		<logger level="WARN" doc:name="payload" doc:id="fc475cdd-6ab6-41bf-b2df-33ec3d1f0e44" message="#[payload]"/>
+		<choice doc:name="Check Payload" doc:id="80e2c63a-23ad-4ed3-9610-95b84b6db44e" >
+			<when expression="#[payload != null and payload is Object and sizeOf(payload) &gt; 0]" >
+				<logger level="INFO" doc:name="object payload start log" doc:id="781aa8fe-d5f2-40e8-9203-322685415563" message=" Payload of type Object is: #[payload]"/>
+				<flow-ref doc:name="ConsumeOrderDataFlow" doc:id="ca4f9ccd-2e8f-457b-9830-746fa50bcb80" name="consume-subflow" />
+				<logger level="INFO" doc:name="end log" doc:id="0258df1e-4af7-4f82-8c8a-1219ab91724b" message="consumed order data object from ActiveMQ"/>
+				<ee:transform doc:name="OrderDataFinalResponse" doc:id="ca06a97d-d409-4405-b3dd-814a8f5e319c" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"status" : "success",
+	"message" : "The API successfully consumes order data from ActiveMQ",
+    "description": "Data is processed according to the mapping rules and stored in the target fields."
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[payload != null and payload is Array and sizeOf(payload) &gt; 0]" >
+				<logger level="INFO" doc:name="array payload start log" doc:id="0d72ad48-9cea-4b3d-a666-96bb7e06aa97" message="Array payload is: #[payload]"/>
+				<foreach doc:name="For Each" doc:id="e7c30b3a-0c13-4fdf-9b81-3b3349ca4b74" >
+					<flow-ref doc:name="ConsumeOrderDataFlow" doc:id="888cd107-cca4-40f6-b412-cd94dae0fc19" name="consume-subflow" />
+				</foreach>
+				<logger level="INFO" doc:name="end log" doc:id="1e94afb1-f66b-4fb1-a725-11d9c3ba3b71" message="consumed oders details list from ActiveMQ"/>
+				<ee:transform doc:name="OrderDataFinalResponse" doc:id="3042a896-6edc-4d40-a2ce-4695aad90efe" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"status" : "success",
+	"message" : "The API successfully consumes orders details from ActiveMQ",
+    "description": "Data is processed according to the mapping rules and stored in the target fields."
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="EmptyPayloadLogger" doc:id="11458580-ed02-4bfc-b847-dce2fd7320b1" message="Payload is neither an object nor an array : #[payload]" />
+				<ee:transform doc:name="‌Invalid Payload Response" doc:id="b3e8be74-47e6-494f-8ee6-7337666b26bc" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+//if (payload == null or payload == []) 
+if( sizeOf(payload) == 0){
+    "message": "Payload is empty" 
+} else {
+     message: "Payload is neither an array nor an object" 
+}
+]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<error-handler ref="global-error-handler" />
+	</flow>
+	
+</mule>
